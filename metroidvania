@@ -1,0 +1,585 @@
+  <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>METROIDVANIA HUD // CORE_DATABASE</title>
+
+    <style>  
+        #painel-superior{
+            z-index: 200;
+            background-color: #011b08; /* Fundo verde-escuro militar bem sutil */
+            border: 4px solid #00ff00; /* Borda 1: Externa Verde Fluorescente */
+            outline: 2px solid #006600; /* Borda 2: Linha extra Verde Oliva colada por fora */
+            padding: 25px;
+            margin-bottom: 40px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2); /* Brilho neon verde */
+        }
+        .titulo {
+            color: #00ff00;
+            font-size: 2.5rem;
+            letter-spacing: 4px;
+            margin: 0;
+            text-shadow: 0 0 10px #00ff00, 2px 2px 0px #006600;
+        }
+        .subtitulo{
+            color:#00ff00 ;
+            margin:0%;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+        }
+
+        /* ==========================================================================
+           [UTILIDADE 1]: AMBIENTE CRT (LINHAS DE TV DE TUBO E TEXTURA RETRÔ)
+           ========================================================================== */
+        body {
+            z-index: 2;
+            background-color: #092e02; /* Fundo Preto Absoluto */
+            color: #ffffff;           /* Letras Brancas para leitura */
+            font-family: 'Courier New', Courier, monospace; /* Fonte terminal antigo */
+            margin: 0;
+            padding: 40px;
+            text-align: center;
+            overflow-x: hidden;
+            /* Brilho azul de fundo simulando vazamento de luz do monitor */
+            background-image: radial-gradient(circle at 50% 40%, #011a0b 0%, transparent 70%);
+        }
+
+        /* Camada transparente colada na tela inteira para simular o vidro e as linhas */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            z-index: 9; /* ALTERADO: Agora fica por cima de ABSOLUTAMENTE tudo (topo e base) */
+            
+            /* Desenha linhas pretas de 4px repetidas simulando linhas de varredura (Scanlines) */
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.45) 50%);
+            background-size: 100% 4px;
+            
+            pointer-events: none; /* REGRA DE OURO: Permite que o clique do mouse atravesse o vidro */
+            animation: oscilacaoEnergia 0.15s infinite; /* Pisca o brilho da tela */
+        }
+
+        /* Oculta completamente as bolinhas de rádio nativas do HTML */
+        .gatilho-invisivel {
+            display: none !important;
+        }
+
+        /* ==========================================================================
+           [UTILIDADE 2]: DESIGN DO PAINEL SUPERIOR (SISTEMA DE MOLDURAS DUPLAS SEPARADAS)
+           ========================================================================== */
+        #painel-superior {
+            position: relative; 
+            z-index: 200; /* Mantém o topo flutuando por cima do vidro da TV antiga */
+            margin-bottom: 40px;
+        }
+
+        /* Alinha os dois quadros um ao lado do outro na horizontal */
+        .conteudo-superior-duplo {
+            display: flex;
+            justify-content: space-between;
+            gap: 30px; /* Cria um espaçamento de 30px de ar entre os dois quadros */
+            max-width: 1000px;
+            margin: 15px auto 0 auto;
+        }
+
+        /* CADA COLUNA AGORA VIRA UM QUADRO MILITAR SEPARADO COM DUPLA BORDA VERDE */
+        .coluna-superior {
+            flex: 1; /* Força os dois quadros a terem exatamente o mesmo tamanho */
+            background-color: #020803; /* Fundo verde-escuro tático individual */
+            
+            /* A engenharia das duas bordas aplicada EM CADA QUADRO INDIVIDUALMENTE */
+            border: 4px solid #00ff00;  /* Borda 1: Verde Fluorescente interna */
+            outline: 2px solid #006600; /* Borda 2: Verde Oliva escuro por fora */
+            
+            padding: 25px; /* Espaço para o texto não sufocar contra a borda verde */
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.15); /* Brilho neon individual */
+            text-align: justify;
+        }
+
+        /* Títulos internos de cada quadro ([ARQUIVO] e [GUIA]) */
+        .coluna-superior h3 {
+            color: #00ff00;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-shadow: 0 0 5px #00ff00;
+            border-bottom: 1px dashed rgba(0, 255, 0, 0.4); /* Linha divisória interna verde */
+            padding-bottom: 5px;
+        }
+
+        .coluna-superior p {
+            color: #cccccc;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin: 8px 0;
+        }
+
+        .coluna-superior p strong {
+            color: #00ff00; /* Destaca marcadores e passos em Verde Brilhante */
+        }
+
+        /* ==========================================================================
+           [UTILIDADE 3]: LETREIRO DE EMBÊRGENCIA (#ALERTA PISCANTE)
+           ========================================================================== */
+        #alerta {
+            color: crimson;
+            text-shadow: 0 0 10px crimson, 2px 2px 0px red;
+            letter-spacing: 5px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 20px 0 0 0;
+            animation: pulsarAlerta 1.5s infinite alternate; /* Aciona o piscar da luz */
+        }
+
+        /* ==========================================================================
+           [UTILIDADE 4]: GRID INFERIOR (ORGANIZAÇÃO LADO A LADO DO RADAR E MENSAGENS)
+           ========================================================================== */
+        #painel-inferior {
+            display: flex;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: 20px;
+            text-align: left;
+            position: relative;
+            z-index: 200; /* Garante que a parte inferior também interaja corretamente sob o vidro */
+        }
+
+        #painel-scanner-lateral {
+            flex: 0 0 260px;
+        }
+
+        /* RADAR REDONDO ESTÉTIÇÃO MILITAR */
+        #circulo-radar {
+            width: 110px;
+            height: 110px;
+            border: 3px solid #15ff00;
+            border-radius: 50%;
+            margin-bottom: 25px;
+            position: relative;
+            background: radial-gradient(circle, rgba(0,255,0,0.08) 0%, transparent 75%);
+            animation: pulsarRadar 1.8s infinite alternate ease-in-out;
+        }
+
+        /* Mira interna central (+) */
+        #circulo-radar::before {
+            content: "";
+            position: absolute;
+            top: 50%; left: 10%; right: 10%;
+            height: 1px;
+            background: rgba(0, 255, 0, 0.3);
+            transform: translateY(-50%);
+        }
+        #circulo-radar::after {
+            content: "";
+            position: absolute;
+            left: 50%; top: 10%; bottom: 10%;
+            width: 1px;
+            background: rgba(0, 255, 0, 0.3);
+            transform: translateX(-50%);
+        }
+
+        #bloco-conteudo-direito {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* O X acende em amarelo se o mouse passar nele */
+        .botao-fechar:hover {
+            background-color: #ffff00;
+            color: #000000;
+            border-color: #ffff00;
+        }
+
+        /* ==========================================================================
+           [UTILIDADE 11]: FIAÇÃO DE ALTERNÂNCIA EXCLUSIVA (CSS RADIO HACK - MÁGICA DO CLIQUE)
+           ========================================================================== */
+        #chave-metroid:checked ~ #painel-inferior #gaveta-metroid { display: block; }
+        #chave-sotn:checked ~ #painel-inferior #gaveta-sotn { display: block; }
+        #chave-hollow:checked ~ #painel-inferior #gaveta-hollow { display: block; }
+        #chave-dread:checked ~ #painel-inferior #gaveta-dread { display: block; }
+        #chave-blasphemous:checked ~ #painel-inferior #gaveta-blasphemous { display: block; }
+        #chave-cells:checked ~ #painel-inferior #gaveta-cells { display: block; }
+
+        /* Vínculo dos Diagnósticos com os Radios */
+        #chave-reset:checked ~ #painel-inferior #diagnostico-espera { display: block; }
+        #chave-metroid:checked ~ #painel-inferior #diagnostico-metroid { display: block; }
+        #chave-sotn:checked ~ #painel-inferior #diagnostico-sotn { display: block; }
+        #chave-hollow:checked ~ #painel-inferior #diagnostico-hollow { display: block; }
+        #chave-dread:checked ~ #painel-inferior #diagnostico-dread { display: block; }
+        #chave-blasphemous:checked ~ #painel-inferior #diagnostico-blasphemous { display: block; }
+        #chave-cells:checked ~ #painel-inferior #diagnostico-cells { display: block; }
+
+        /* Se QUALQUER uma das 6 chaves de rádio ligar, desligue e apague a tela de espera padrão */
+        #chave-metroid:checked ~ #painel-inferior #tela-espera-central,
+        #chave-sotn:checked ~ #painel-inferior #tela-espera-central,
+        #chave-hollow:checked ~ #painel-inferior #tela-espera-central,
+        #chave-dread:checked ~ #painel-inferior #tela-espera-central,
+        #chave-blasphemous:checked ~ #painel-inferior #tela-espera-central,
+        #chave-cells:checked ~ #painel-inferior #tela-espera-central {
+            display: none;
+        }
+
+        #chave-metroid:checked ~ #painel-inferior #diagnostico-espera,
+        #chave-sotn:checked ~ #painel-inferior #diagnostico-espera,
+        #chave-hollow:checked ~ #painel-inferior #diagnostico-espera,
+        #chave-dread:checked ~ #painel-inferior #diagnostico-espera,
+        #chave-blasphemous:checked ~ #painel-inferior #diagnostico-espera,
+        #chave-cells:checked ~ #painel-inferior #diagnostico-espera {
+            display: none;
+        }
+
+        /* ==========================================================================
+           [UTILIDADE 12]: MOTORES CRONOMETRADOS (LINHAS DO TEMPO DAS ANIMAÇÕES)
+           ========================================================================== */
+        @keyframes oscilacaoEnergia { 
+            0% { opacity: 0.96; } 
+            50% { opacity: 1; } 
+            100% { opacity: 0.97; } 
+        }
+
+        @keyframes pulsarRadar { 
+            0% { border-color: #15ff00; box-shadow: 0 0 8px rgba(21, 255, 0, 0.3), inset 0 0 6px rgba(21, 255, 0, 0.2); } 
+            100% { border-color: #00850b; box-shadow: 0 0 18px rgba(0, 255, 0, 0.6), inset 0 0 12px rgba(0, 255, 0, 0.4); } 
+        }
+
+        @keyframes pulsarAlerta {
+            0% { opacity: 0.3; text-shadow: 0 0 5px crimson; }
+            100% { opacity: 1; text-shadow: 0 0 20px crimson, 3px 3px 0px red; }
+        }
+
+        /* ==========================================================================
+           [UTILIDADE 13]: DESIGN MILITAR DE DUPLA BORDA VERDE PARA OS TEXTOS
+           ========================================================================== */
+        #monitor-central-mensagens {
+            background-color: #011407; /* Fundo verde-escuro militar sutil */
+            border: 4px solid #00ff00; /* Borda 1: Externa Verde Fluorescente */
+            outline: 2px solid #006600; /* Borda 2: Linha extra Verde Oliva colada por fora */
+            padding: 30px;
+            min-height: 140px;
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.2);
+            text-align: left;
+            position: relative;
+        }
+
+        #monitor-central-mensagens h3,
+        .caixa-painel-jogo h2 {
+            color: #00ff00 !important; /* Força o título a virar Verde em vez de amarelo */
+            text-shadow: 0 0 8px #00ff00;
+            margin-top: 0;
+        }
+
+        .caixa-painel-jogo {
+            display: none;
+        }
+
+        .caixa-painel-jogo strong {
+            color: #00ff00 !important;
+        }
+
+        .botao-fechar {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            border: 2px solid #00ff00;
+            padding: 5px 10px;
+            cursor: pointer;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        /* ==========================================================================
+           [UTILIDADE 14]: CAIXAS EXCLUSIVAS DE SUPORTE PARA OS BOTÕES DE RÁDIO
+           ========================================================================== */
+        #lista-chamadas-radar {
+            display: flex;
+            flex-direction: column; 
+            align-items: flex-start;
+            gap: 12px; /* Cria um espaçamento cirúrgico e fixo entre as caixas */
+        }
+
+        #lista-chamadas-radar label {
+            display: block;
+            width: 240px; /* Largura travada para todas as caixas ficarem idênticas */
+            box-sizing: border-box;
+            background-color: #030a05; /* Fundo verde-escuro militar */
+            
+            /* Engenharia de duas bordas: border (linha grossa) + outline (linha fina colada por fora) */
+            border: 3px solid #00ff00; /* Borda 1: Verde Fluorescente */
+            outline: 1px solid #006600; /* Borda 2: Verde Oliva escuro */
+            
+            color: #00ff00; /* Texto em verde digital */
+            font-size: 0.75rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            padding: 10px 15px; /* Espaço interno para o texto respirar dentro da caixa */
+            cursor: pointer;
+            text-transform: uppercase;
+            text-align: left; /* Alinha o identificador da transmissão para a esquerda */
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.1);
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Transição suave militar */
+        }
+
+        #lista-chamadas-radar label:hover {
+            background-color: #00ff00; /* Inverte: fundo fica verde brilhante */
+            color: #000000; /* Texto fica preto para contraste total */
+            border-color: #ffff00; /* A borda externa reage virando amarela */
+            outline-color: #ffff00;
+            box-shadow: 0 0 20px #00ff00; /* Brilho neon verde violento */
+            padding-left: 20px; /* O texto dá um passo para a direita dentro da própria caixa */
+        }
+
+        /* ==========================================================================
+           [UTILIDADE 15]: ALINHAMENTO DA NOVA DIVISÃO DO PAINEL SUPERIOR
+           ========================================================================== */
+        .coluna-superior h3 {
+            color: #00ff00;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            margin-top: 0;
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .coluna-superior p {
+            color: #cccccc;
+            font-size: 0.85rem; /* Letras compactas para caber todo o novo texto sem apertar */
+            line-height: 1.5;
+            margin: 5px 0;
+        }
+
+        .coluna-superior p strong {
+            color: #00ff00; 
+        }
+
+        /* Estilos dos botões Ativos (:checked) */
+        #chave-metroid:checked ~ #painel-inferior label[for="chave-metroid"] { background-color: #a30353; color: #ffffff; border-color: #b800ff; }
+        #chave-sotn:checked ~ #painel-inferior label[for="chave-sotn"] { background-color:rgb(139, 0, 0); color: #ffffff; border-color: #ffee00; }
+        #chave-hollow:checked ~ #painel-inferior label[for="chave-hollow"] { background-color:#0a192f; color: #ffffff; border-color: #00f2fe; }
+        #chave-dread:checked ~ #painel-inferior label[for="chave-dread"] { background-color: #ff0000; color: #ffffff; border-color:#e0e0e0; }
+        #chave-blasphemous:checked ~ #painel-inferior label[for="chave-blasphemous"] { background-color:#2b1810; color: #ffffff; border-color: #ff6600; }
+        #chave-cells:checked ~ #painel-inferior label[for="chave-cells"] { background-color:#1a0933; color: #ffffff; border-color: #ccff00; }
+
+        /* Estilos adicionais do Monitor de Diagnóstico */
+        #mini-monitor-diagnostico {
+            background-color: #011407;
+            border: 3px solid #00ff00;
+            outline: 1px solid #006600;
+            padding: 15px;
+            min-height: 80px;
+            position: relative;
+        }
+        .status-diagnostico {
+            display: none;
+        }
+        .status-diagnostico h4 {
+            color: #00ff00;
+            margin: 0 0 10px 0;
+        }
+        .status-diagnostico p {
+            margin: 4px 0;
+            font-size: 0.85rem;
+        }
+        .scanner-linha {
+            width: 100%;
+            height: 2px;
+            background-color: rgba(0, 255, 0, 0.4);
+            position: absolute;
+            top: 0; left: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header id="painel-superior">
+        <h1 class="titulo">NOVO JOGO</h1>
+        <div class="subtitulo">//METROIDVANIA//</div>
+        <div id="alerta">SISTEMA DE RASTREAMENTO ATIVO</div>
+        
+        <div class="conteudo-superior-duplo">
+            <!-- COLUNA 1 (ESQUERDA) -->
+            <div class="coluna-superior">
+                <h3>[ARQUIVO_HISTÓRICO]</h3>
+                <p><strong>[ARQUIVO_HISTÓRICO]:</strong> Subgênero de exploração não-linear forjado a partir da fusão mecânica entre Metroid (1986) e a evolução estrutural de Castlevania.</p>
+                <p><strong>[DIRETRIZ_DE_SUCESSO]:</strong> O avanço pelo mapa é dictado pelo backtracking. Aqui, barreiras não exigem chaves convencionais, mas sim a absorção de upgrades e mutações físicas que expandem as capacidades anatômicas do hospedeiro.</p>
+            </div>
+            
+            <!-- COLUNA 2 (DIREITA) -->
+            <div class="coluna-superior">
+                <h3>[GUIA_DE_OPERAÇÃO]</h3>
+                <p><strong>PASSO 1:</strong> Analise os picos de transmissão piscando nas cápsulas de frequência ao lado do radar esquerdo.</p>
+                <p><strong>PASSO 2:</strong> Pressione a cápsula desejada para sintonizar a linha de rádio e forçar o monitor central a decodificar o relatório.</p>
+                <p><strong>PASSO 3:</strong> Ative o disjuntor <em>[X]</em> interno da gaveta ativa para resetar a varredura e redefinir o terminal em modo de espera.</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- DISJUNTORES DE RÁDIO (CSS RADIO HACK) -->
+    <input type="radio" id="chave-reset" name="grupo-jogos" class="gatilho-invisivel" checked>
+    <input type="radio" id="chave-metroid" name="grupo-jogos" class="gatilho-invisivel">
+    <input type="radio" id="chave-sotn" name="grupo-jogos" class="gatilho-invisivel">
+    <input type="radio" id="chave-hollow" name="grupo-jogos" class="gatilho-invisivel">
+    <input type="radio" id="chave-dread" name="grupo-jogos" class="gatilho-invisivel">
+    <input type="radio" id="chave-blasphemous" name="grupo-jogos" class="gatilho-invisivel">
+    <input type="radio" id="chave-cells" name="grupo-jogos" class="gatilho-invisivel">
+
+    <!-- PAINEL INFERIOR PRINCIPAL -->
+    <main id="painel-inferior">
+        
+        <!-- SEÇÃO LATERAL ESQUERDA -->
+        <div id="painel-scanner-lateral">
+            <div id="circulo-radar"></div>
+            <div id="lista-chamadas-radar">
+                <label for="chave-metroid">[ZEBES_SOS // DETECTADO]</label>
+                <label for="chave-sotn">[DRACULA_JR // FREQ_NIGHT]</label>
+                <label for="chave-hollow">[HALLOWNEST // INFECÇÃO]</label>
+                <label for="chave-dread">[ZDR_DREAD // ALERTA_X]</label>
+                <label for="chave-blasphemous">[CVSTODIA // PENITÊNCIA]</label>
+                <label for="chave-cells">[PRISIONEIRO // INVASÃO]</label>
+            </div>
+        </div>
+
+        <!-- SEÇÃO CONTEÚDO DIREITO -->
+        <div id="bloco-conteudo-direito">
+            
+            <!-- MONITOR CENTRAL -->
+            <div id="monitor-central-mensagens">
+                
+                <div id="tela-espera-central">
+                    <h3>[SINTONIZE FREQUÊNCIA]</h3>
+                    <p>Use o painel do scanner tático no canto esquerdo para captar, sintonizar e decodificar um relatório de transmissão...</p>
+                </div>
+
+                <!-- GAVETA 1: SUPER METROID -->
+                <div id="gaveta-metroid" class="caixa-painel-jogo">
+                    <label for="chave-reset" class="botao-fechar">X</label>
+                    <h2>SUPER METROID (1994)</h2>
+                    <p><strong>[SINAL_INTERCEPTADO // CÓDIGO_FONTE: FEDERAÇÃO_GALÁCTICA]
+[STATUS: ALERTA CRÍTICO // ATMOSFERA AMBIENTAL: TÓXICA]</strong>
+
+Alguém na escuta?! Os Piratas Espaciais tomaram o subterrâneo... Ridley levou a última larva Metroid!
+Estamos trancados por portas de plasma que nem nossas bombas arranham. Espera... aquela nave descendo na atmosfera... 
+é a Caçadora de Recompensas? Samus está aqui. Se ela não resolver isso, esse planeta vai explodir!
+
+[AVISO]: Se o protocolo de autodestruição do planeta for ativado... corra.</p>
+                </div>
+
+                <!-- GAVETA 2: CASTLEVANIA: SOTN -->
+                <div id="gaveta-sotn" class="caixa-painel-jogo">
+                    <label for="chave-reset" class="botao-fechar">X</label>
+                    <h2>CASTLEVANIA: SOTN (1997)</h2>
+                    <p><strong>[SINAL_INTERCEPTADO // FREQUÊNCIA: CÉU_NOTURNO]
+[STATUS: ANOMALIA GRAVITACIONAL // LOCAL: CASTELO INVERTIDO]</strong>Aqui é Alucard. Rompi o selo do meu próprio sono para conter a loucura do meu pai.
+                    O castelo se distorceu, a própria gravidade está invertida e Richter Belmont caiu sob o domínio das trevas.
+                    Se a morte pensa que vai roubar meus equipamentos e me parar neste labirinto, ela esqueceu de quem carrega o sangue do Drácula</p>
+                </div>
+
+                <!-- GAVETA 3: HOLLOW KNIGHT -->
+                <div id="gaveta-hollow" class="caixa-painel-jogo">
+                    <label for="chave-reset" class="botao-fechar">X</label>
+                    <h2>HOLLOW KNIGHT (2017)</h2>
+                    <p><strong>[SINAL_INTERCEPTADO // FREQUÊNCIA: AGULHA_E_FIO]
+[STATUS: INFECÇÃO ATIVA // LOCAL: RUÍNAS DE HALLOWNEST]</strong>Aqui é Hornet. Um fantasma cinzento e sem voz acabou de descer o poço de Dirtmouth.
+                    Essa coisinha carrega um ferrão quebrado, mas está absorvendo as almas dos mortos e quebrando os selos dos Sonhadores no soco.
+                    A infecção alaranjada está enlouquecendo os insetos, e o Ovo Negro está prestes a romper.
+                    Se esse principezinho persistente não morrer no caminho, ele vai acabar enfrentando o próprio passado.</p>
+                </div>
+
+                <!-- GAVETA 4: METROID DREAD -->
+                <div id="gaveta-dread" class="caixa-painel-jogo">
+                    <label for="chave-reset" class="botao-fechar">X</label>
+                    <h2>METROID DREAD (2021)</h2>
+                    <p><strong>[SINAL_INTERCEPTADO // PROTOCOLO: TRANSMISSÃO_ZDR]
+[STATUS: EMBOSCADA_BIOLÓGICA // LOCAL: PROFUNDEZAS DE ARTARIA]</strong>Aqui é Samus Aran. Fui atraída para o planeta ZDR após relatos de que o parasita X ainda estava vivo.
+                    But a verdadeira armadilha estava me esperando no subsolo. Os robôs E.M.M.I. da Federação foram hackeados;
+                    eles não respondem a comandos e estão bloqueando os setores. Minhas armas normais ricocheteiam na blindagem deles.
+                    Um único toque daquelas agulhas perfura meu peito. Preciso drenar a energia das Unidades Centrais para superaquecer meu canhão, ou serei consumida.</p>
+                </div>
+
+                <!-- GAVETA 5: BLASPHEMOUS -->
+                <div id="gaveta-blasphemous" class="caixa-painel-jogo">
+                    <label for="chave-reset" class="botao-fechar">X</label>
+                    <h2>BLASPHEMOUS (2019)</h2>
+                    <p><strong>[SINA_L_LE_N_T_O // FREQUÊNCIA: CAMINHO_DOS_PASSOS_PERDIDOS]
+[STATUS: PEREGRINAÇÃO_ETERNA // LOCAL: CVSTODIA]</strong>Ai de mim... Sou apenas um pobre e miserável peregrino, arrastando-me sob o peso esmagador desta estátua amarrada às minhas costas...
+                    [CHIADO] ...Estou andando há semanas e minhas pernas já não aguentam mais esta penitência... [FALHA DE ÁUDIO]
+                    ...Um guerreiro mudo de elmo cônico, o Penitente, acabou de passar correndo por mim... He saltou sobre um abismo de espinhos, errou o t-timing e virou poeira... Espera, ele ressuscitou e passou por mim de novo... Que o Milagre tenha piedade das nossas almas, porque minha l-lomb_ar está destruída... Alguém me ajude...</p>
+                </div>
+
+                <!-- GAVETA 6: DEAD CELLS -->
+                <div id="gaveta-cells" class="caixa-painel-jogo">
+                    <label for="chave-reset" class="botao-fechar">X</label>
+                    <h2>DEAD CELLS (2018)</h2>
+                    <p><strong>[SINA_L_INTE_RCE_PTA_DO // FR_QUÊN_CIA: COR_ROM_PIDA]
+[STATUS: MORRE_E_VOLTA // LOCAL: DE_SER_T_NÃO, ESPERA... MASMORRA]</strong></p>
+                    <p><strong>[O PRISIONEIRO]:</strong> <em>"Alô? Som? Que raio de site todo verde é esse?
+                    Alguém avisa pro Dev que o botão de rolar tá travado! Eu só queria passar da porra da horta e... [CHIADO] ...espera, por que tem um cara de cabelo branco na minha linha de r--?</em></p>
+                    <p><strong>[INTERFERÊNCIA DE ALUCARD]:</strong> DEVOLVE A MINHA ESPADA, SEU PROTAGONISTA SEM CABEÇA DO INF_ERNO! Você invadiu meu DLC, pegou meu escudo e agora tá usando meu sinal de rádio?! Saia já do meu canal!"</p>
+                    <p><strong>[O PRISIONEIRO]:</strong> Ih, chorou... Perdeu, morcego! O escudo é meu! Fui!<em></em></p>
+                </div>
+
+            </div>
+
+            <!-- MINI MONITOR DE DIAGNÓSTICO -->
+            <div id="mini-monitor-diagnostico">
+                
+                <div id="diagnostico-espera" class="status-diagnostico">
+                    <div class="scanner-linha"></div>
+                    <h4>[SCANNER_IDLE]</h4>
+                    <p>Aguardando pulso de rádio externo nos setores táticos...</p>
+                </div>
+
+                <div id="diagnostico-metroid" class="status-diagnostico">
+                    <div class="scanner-linha"></div>
+                    <h4>[DIAG_ZEBES]</h4>
+                    <p><strong>PLANETA:</strong> Subterrâneo Tóxico</p>
+                    <p><strong>PERIGO:</strong> CRÍTICO (Autodestruição)</p>
+                </div>
+
+                <div id="diagnostico-sotn" class="status-diagnostico">
+                    <div class="scanner-linha"></div>
+                    <h4>[DIAG_CASTLE]</h4>
+                    <p><strong>LOCAL:</strong> Gravidade Invertida</p>
+                    <p><strong>PERIGO:</strong> ALTO (Trevas Ativas)</p>
+                </div>
+
+                <div id="diagnostico-hollow" class="status-diagnostico">
+                    <div class="scanner-linha"></div>
+                    <h4>[DIAG_HALLOW]</h4>
+                    <p><strong>LOCAL:</strong> Ruínas Esquecidas</p>
+                    <p><strong>PERIGO:</strong> SURTO (Infecção)</p>
+                </div>
+
+                <div id="diagnostico-dread" class="status-diagnostico">
+                    <div class="scanner-linha"></div>
+                    <h4>[DIAG_ZDR]</h4>
+                    <p><strong>PLANETA:</strong> Complexo Artaria</p>
+                    <p><strong>PERIGO:</strong> MÁXIMO (Parasita X / EMMI)</p>
+                </div>
+
+                <div id="diagnostico-blasphemous" class="status-diagnostico">
+                    <div class="scanner-linha"></div>
+                    <h4>[DIAG_CVSTODIA]</h4>
+                    <p><strong>LOCAL:</strong> Caminho dos Espinhos</p>
+                    <p><strong>PERIGO:</strong> ETERNO (Milagre Doloroso)</p>
+                </div>
+
+                <div id="diagnostico-cells" class="status-diagnostico">
+                    <div class="scanner-linha"></div>
+                    <h4>[DIAG_CELLS]</h4>
+                    <p><strong>LOCAL:</strong> Masmorra Corrompida</p>
+                    <p><strong>PERIGO:</strong> VARIÁVEL (Loop Temporal)</p>
+                </div>
+
+            </div>
+
+        </div> 
+    </main>
+
+</body>
+</html>
